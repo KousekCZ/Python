@@ -59,7 +59,15 @@ async def start_websocket_server():
     print(f"WebSocket server is running at ws://{ip_address}:{port}")
 
     await server.wait_closed()
-
+    
+async def connect_to_server():
+    uri = "ws://0.0.0.0:6789"  # Změňte na správnou adresu a port vašeho serveru
+    async with websockets.connect(uri) as websocket:
+        while True:
+            message = input("Zadejte zprávu: ")
+            await websocket.send(message)
+            response = await websocket.recv()
+            print("Přijato od serveru:", response)
 
 if __name__ == "__main__":
     asyncio.get_event_loop().run_until_complete(start_websocket_server())
