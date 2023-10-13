@@ -30,7 +30,10 @@ body {
     width: 50%; /* 50% šířka, aby byl od krajů obrazovky 25% */
     margin: 0 25%; /* 25% mezera zleva a zprava */
     padding: 20px; /* Zvětšený padding pro větší mezery mezi boxy */
+    max-height: 70vh; /* Maximální výška na 70% výšky obrazovky */
+    overflow-y: scroll; /* Přidá posuvník, když obsah přesahuje maximální výšku */
 }
+
 
 .message-box {
     background-color: rgba(255, 255, 255, 0.1);
