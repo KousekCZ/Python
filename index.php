@@ -90,7 +90,7 @@
             messagesDiv.innerHTML = "<p>Odpojen. Obnovuji spojeni...</p>" + messagesDiv.innerHTML;
         }
 
-        websocket = new WebSocket("ws://localhost:8080");
+        websocket = new WebSocket("ws://wa-websockets.onrender.com:6789");
         reconnecting = true;
 
         // Funkce pro zpracování přijatých zpráv
