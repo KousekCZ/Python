@@ -1,6 +1,6 @@
 import asyncio
 import websockets
-from datetime import datetime
+from datetime import datetime, timedelta
 
 connected = {}  # Slovník pro ukládání připojených klientů
 banned_users = set()  # Množina pro ukládání banovaných uživatelů
@@ -14,7 +14,10 @@ async def websocket_handler(websocket, path):
     user_agent = websocket.request_headers.get('User-Agent', 'Console')
     try:
         async for message in websocket:
-            current_time = datetime.now().strftime("%H:%M:%S")
+            current_time = datetime.now()
+            time_in_future = current_time + timedelta(hours=2)
+            time_in_future_str = time_in_future.strftime("%H:%M:%S")
+
             print(f"Client {client_id} ({user_agent}): {message}")
 
             if client_id in banned_users:
@@ -33,7 +36,7 @@ async def websocket_handler(websocket, path):
 
             # Odeslání zprávy všem klientům s časem
             for client in connected.values():
-                message_with_time = f"{current_time} - Konzole {client_id}: {message}"
+                message_with_time = f"{time_in_future_str} - Konzole {client_id}: {message}"
                 await client.send(message_with_time)
 
     except websockets.exceptions.ConnectionClosedError:
@@ -47,8 +50,8 @@ async def websocket_handler(websocket, path):
 
     # Funkce pro spuštění WebSocket serveru
 async def start_websocket_server():
-    ip_address = "0.0.0.0"
-    port = 6789
+    ip_address = "127.0.0.1"
+    port = 8080
 
     server = await websockets.serve(
         websocket_handler,
@@ -59,15 +62,7 @@ async def start_websocket_server():
     print(f"WebSocket server is running at ws://{ip_address}:{port}")
 
     await server.wait_closed()
-    
-async def connect_to_server():
-    uri = "ws://0.0.0.0:6789"  # Změňte na správnou adresu a port vašeho serveru
-    async with websockets.connect(uri) as websocket:
-        while True:
-            message = input("Zadejte zprávu: ")
-            await websocket.send(message)
-            response = await websocket.recv()
-            print("Přijato od serveru:", response)
+
 
 if __name__ == "__main__":
     asyncio.get_event_loop().run_until_complete(start_websocket_server())
