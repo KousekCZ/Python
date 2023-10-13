@@ -3,18 +3,22 @@ let reconnecting = false;
 const messageInput = document.getElementById("message");
 const connectionStatus = document.getElementById("connection-status");
 
+// Přidáme proměnnou pro uživatelovo jméno
+let userName = prompt("Zadejte sve jmeno:");
+
 function createWebSocket() {
     if (reconnecting) {
         const messagesDiv = document.getElementById("messages");
         messagesDiv.innerHTML = "<p>Odpojen. Obnovuji spojeni...</p>" + messagesDiv.innerHTML;
     }
 
-    websocket = new WebSocket("wss://wa-websockets.onrender.com");
+    websocket = new WebSocket("wss://wa-websockets.onrender.com"); //ws://localhost:8080
     reconnecting = true;
 
     websocket.onmessage = function (event) {
         const messagesDiv = document.getElementById("messages");
         const message = event.data;
+
         messagesDiv.innerHTML = `<p>${message}</p>` + messagesDiv.innerHTML;
 
         if (message === "Byl jste zabanován za použití zakázaného slova 'Rum'.") {
@@ -32,7 +36,8 @@ function createWebSocket() {
 
     websocket.onopen = function () {
         if (reconnecting) {
-            websocket.send("Spojeni navazano");
+            // Odešleme uživatelovo jméno na server
+            websocket.send(`User: ${userName} - Pripojen/a!`);
         }
         connectionStatus.innerText = "Pripojen";
         connectionStatus.style.color = "green";
@@ -54,7 +59,8 @@ messageInput.addEventListener("keyup", function (event) {
 function sendMessage() {
     const message = messageInput.value;
     if (message.trim() !== "") {
-        websocket.send(`Web: ${message}`);
+        // Odešleme zprávu s uživatelovým jménem na server
+        websocket.send(`User: ${userName}, Zprava: ${message}`);
         messageInput.value = "";
     }
 }
