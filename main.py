@@ -50,8 +50,8 @@ async def websocket_handler(websocket, path):
 
     # Funkce pro spuštění WebSocket serveru
 async def start_websocket_server():
-    ip_address = "127.0.0.1"
-    port = 8080
+    ip_address = "0.0.0.0"
+    port = 6789
 
     server = await websockets.serve(
         websocket_handler,
