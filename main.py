@@ -36,7 +36,7 @@ async def websocket_handler(websocket, path):
 
             # Odeslání zprávy všem klientům s časem
             for client in connected.values():
-                message_with_time = f"{time_in_future_str} - Konzole {client_id}: {message}"
+                message_with_time = f"{time_in_future_str} - ID {client_id}, {message}"
                 await client.send(message_with_time)
 
     except websockets.exceptions.ConnectionClosedError:
@@ -47,11 +47,12 @@ async def websocket_handler(websocket, path):
         del connected[client_id]
         banned_users.discard(client_id)
 
-
     # Funkce pro spuštění WebSocket serveru
+
+
 async def start_websocket_server():
-    ip_address = "0.0.0.0"
-    port = 6789
+    ip_address = "127.0.0.1"
+    port = 8080
 
     server = await websockets.serve(
         websocket_handler,
