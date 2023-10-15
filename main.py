@@ -24,6 +24,7 @@ async def websocket_handler(websocket, path):
                 # Banování klienta
                 await websocket.send("Byl jste zabanován za použití zakázaného slova 'Rum'.")
                 await websocket.close()
+                await asyncio.sleep(10)
                 del connected[client_id]  # Odstraníme klienta ze seznamu
 
             # Odeslání zprávy všem klientům s časem
