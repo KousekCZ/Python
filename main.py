@@ -4,14 +4,16 @@ from datetime import datetime, timedelta
 
 connected = {}  # Slovník pro ukládání připojených klientů
 banned_users = set()  # Množina pro ukládání banovaných uživatelů
+ip_to_client = {}  # Slovník pro mapování IP adres na klienty
+ban_duration = 10  # Doba banování v sekundách
 
 
 # Funkce pro zpracování zpráv
 async def websocket_handler(websocket, path):
     client_id = len(connected) + 1  # Přiřazení jedinečného ID klientovi
     connected[client_id] = websocket  # Uložení klienta do slovníku
-
     user_agent = websocket.request_headers.get('User-Agent', 'Console')
+
     try:
         async for message in websocket:
             current_time = datetime.now()
@@ -31,8 +33,11 @@ async def websocket_handler(websocket, path):
                 banned_users.add(client_id)  # Přidání klienta do seznamu banovaných
                 await websocket.send("Byl jste banován za použití zakázaného slova 'Rum'. Budete odbanován za 10s")
                 await websocket.close()
-                await asyncio.sleep(10)  # Počkej 10 sekund
+                ip_address = websocket.remote_address[0]  # Získání IP adresy klienta
+                ip_to_client[ip_address] = client_id  # Mapování IP adresy na klienta
+                await asyncio.sleep(ban_duration)  # Počkej 10 sekund
                 banned_users.discard(client_id)
+                ip_to_client.pop(ip_address, None)  # Odstranění z mapování IP adresy na klienta
 
             # Odeslání zprávy všem klientům s časem
             for client in connected.values():
@@ -47,9 +52,8 @@ async def websocket_handler(websocket, path):
         del connected[client_id]
         banned_users.discard(client_id)
 
-    # Funkce pro spuštění WebSocket serveru
 
-
+# Funkce pro spuštění WebSocket serveru
 async def start_websocket_server():
     ip_address = "0.0.0.0"
     port = 6789
