@@ -12,7 +12,7 @@ function createWebSocket() {
         messagesDiv.innerHTML = "<p>Odpojen. Obnovuji spojeni...</p>" + messagesDiv.innerHTML;
     }
 
-    websocket = new WebSocket("wss://wa-websockets.onrender.com"); //ws://localhost:8080
+    websocket = new WebSocket("ws://localhost:8080"); //ws://localhost:8080
     reconnecting = true;
 
     websocket.onmessage = function (event) {
@@ -20,10 +20,6 @@ function createWebSocket() {
         const message = event.data;
 
         messagesDiv.innerHTML = `<p>${message}</p>` + messagesDiv.innerHTML;
-
-        if (message === "Byl jste zabanován za použití zakázaného slova 'Rum'.") {
-            websocket.close();
-        }
     };
 
     websocket.onclose = function (event) {
