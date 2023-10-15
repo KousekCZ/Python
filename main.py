@@ -1,59 +1,72 @@
 import asyncio
 import websockets
+from datetime import datetime, timedelta
+
+connected = {}  # Dictionary to store connected clients
+banned_ips = {}  # Dictionary to store banned IP addresses for each client
 
 
-class Message():
-    def __init__(self, client_id, message):
-        self.client_id = client_id
-        self.message = message
+# Function for handling messages
+async def websocket_handler(websocket, path):
+    client_id = len(connected) + 1  # Assign a unique ID to the client
+    connected[client_id] = websocket  # Store the client in the dictionary
 
-    def __str__(self):
-        return f"({self.client_id}, {self.message})"
-
-
-banned_clients = set()  # Set of banned clients
-connected = {}
-next_client_id = 1
-messages = []
-
-
-async def handle_client(websocket, path):
-    global next_client_id
-    client_id = next_client_id
-    next_client_id += 1
-
-    client_ip = websocket.remote_address[0]
-
-    if client_ip in banned_clients:
-        await websocket.send("You are banned from the server.")
-        await websocket.close()
-        return
-
-    connected[client_id] = websocket
+    user_agent = websocket.request_headers.get('User-Agent', 'Console')
+    client_ip = websocket.remote_address[0]  # Get the client's IP address
 
     try:
         async for message in websocket:
-            print(f"Client {client_id} sent: {message}")
-            messages.append(Message(client_id, message))
+            current_time = datetime.now()
+            time_in_future = current_time + timedelta(hours=2)
+            time_in_future_str = time_in_future.strftime("%H:%M:%S")
 
-            for id, client in connected.items():
-                if id != client_id:
-                    await client.send(f"Client {client_id}: {message}")
+            print(f"Client {client_id} ({user_agent}): {message}")
 
-            if "rum" in message.lower():  # Check for "rum" or "Rum" in the message
-                banned_clients.add(client_ip)
-                await websocket.send("You have been banned for using the word 'rum'.")
+            if client_id not in banned_ips:
+                banned_ips[client_id] = set()  # Create a set for the client if it doesn't exist
+
+            if client_ip in banned_ips[client_id]:
+                await websocket.send("You are banned and cannot send messages.")
                 await websocket.close()
+                continue
+
+            if "Rum" in message:
+                # Ban the client's IP address
+                banned_ips[client_id].add(client_ip)
+                await websocket.send(
+                    "Your IP address has been banned for using the prohibited word 'Rum'. You will be unbanned in 10 seconds.")
+                await websocket.close()
+                await asyncio.sleep(10)  # Wait for 10 seconds
+                banned_ips[client_id].discard(client_ip)  # Remove the IP from the set when unbanned
+
+            # Send the message to all clients with the current time
+            for client in connected.values():
+                message_with_time = f"{time_in_future_str} - ID {client_id}, {message}"
+                await client.send(message_with_time)
 
     except websockets.exceptions.ConnectionClosedError:
-        pass
-
+        # Client disconnected
+        print(f"Client {client_id} ({user_agent}) disconnected.")
     finally:
+        # Remove the disconnected client from the dictionary
         del connected[client_id]
-        print(f"Client {client_id} disconnected")
 
 
-start_server = websockets.serve(handle_client, "0.0.0.0", 6789)
+# Function for starting the WebSocket server
+async def start_websocket_server():
+    ip_address = "0.0.0.0"
+    port = 6789
 
-asyncio.get_event_loop().run_until_complete(start_server)
-asyncio.get_event_loop().run_forever()
+    server = await websockets.serve(
+        websocket_handler,
+        ip_address,
+        port
+    )
+
+    print(f"WebSocket server is running at ws://{ip_address}:{port}")
+
+    await server.wait_closed()
+
+
+if __name__ == "__main__":
+    asyncio.get_event_loop().run_until_complete(start_websocket_server())
