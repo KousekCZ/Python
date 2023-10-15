@@ -1,12 +1,11 @@
 import asyncio
 import websockets
-from datetime import datetime, timedelta
+import re  # Přidejte modul pro regulární výrazy
 
+banned_clients = set()  # Množina pro ukládání banovaných klientů
 connected = {}  # Slovník pro ukládání připojených klientů
-banned_ips = set()  # Množina pro ukládání banovaných IP adres
 
 
-# Funkce pro zpracování zpráv
 async def websocket_handler(websocket, path):
     client_id = len(connected) + 1  # Přiřazení jedinečného ID klientovi
     connected[client_id] = websocket  # Uložení klienta do slovníku
@@ -16,37 +15,31 @@ async def websocket_handler(websocket, path):
 
     try:
         async for message in websocket:
-            current_time = datetime.now()
-            time_in_future = current_time + timedelta(hours=2)
-            time_in_future_str = time_in_future.strftime("%H:%M:%S")
-
             print(f"Client {client_id} ({user_agent}): {message}")
 
-            if client_ip in banned_ips:
+            if client_id in banned_clients:  # Kontrola, zda klient je v banovaných
                 await websocket.send("Jste banován, nelze posílat zprávy.")
-                # Pokud je IP adresa banovaná, odpojíme ho
+                # Pokud je klient banovaný, odpojíme ho
                 await websocket.close()
                 continue
 
-            if "Rum" in message:
-                # Banování IP adresy klienta
-                banned_ips.add(client_ip)  # Přidání IP adresy do seznamu banovaných
-                await websocket.send(
-                    "Byla zabanována Vaše IP adresa za použití zakázaného slova 'Rum'. Budete odbanováni za 10s")
+            if re.search(r'\bRum\b', message, re.I):  # Hledání slova "Rum" (neovlivňuje velikost písmen)
+                # Banování klienta
+                banned_clients.add(client_id)
+                await websocket.send("Byli jste zabanováni za použití zakázaného slova 'Rum'. Budete odbanováni za 10s")
                 await websocket.close()
                 await asyncio.sleep(10)  # Počkej 10 sekund
-                banned_ips.discard(client_ip)
+                banned_clients.discard(client_id)
 
-            # Odeslání zprávy všem klientům s časem
+            # Odeslání zprávy všem klientům
             for client in connected.values():
-                message_with_time = f"{time_in_future_str} - ID {client_id}, {message}"
-                await client.send(message_with_time)
+                await client.send(f"Client {client_id}: {message}")
 
     except websockets.exceptions.ConnectionClosedError:
         # Odpojení klienta
         print(f"Client {client_id} ({user_agent}) disconnected.")
     finally:
-        # Smažeme odpojeného klienta z evidovaných
+        # Smažeme odpojeného klienta ze seznamu připojených
         del connected[client_id]
 
 
