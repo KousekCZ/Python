@@ -22,7 +22,7 @@ function createWebSocket() {
         messagesDiv.innerHTML = "<p>Odpojen. Obnovuji spojení...</p>" + messagesDiv.innerHTML;
     }
 
-    websocket = new WebSocket("ws://localhost:8080");
+    websocket = new WebSocket("wss://wa-websockets.onrender.com");
     reconnecting = true;
 
     websocket.onmessage = function (event) {
