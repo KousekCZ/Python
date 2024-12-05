@@ -1,4 +1,4 @@
 asyncio
 websockets
-discord==2.3.1
+discord==2.4.0
 cryptography
