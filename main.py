@@ -1,18 +1,28 @@
 import asyncio
+import discord
+from discord.ext import commands
 import websockets
 from datetime import datetime, timedelta
 
-connected = {}  # Slovník pro ukládání připojených klientů
-banned_users = set()  # Množina pro ukládání banovaných uživatelů
-ip_to_client = {}  # Slovník pro mapování IP adres na klienty
-ban_duration = 10  # Doba banování v sekundách
+# WebSocket Server části
+connected = {}
+ip_to_client = {}
+user_info_list = []  # Seznam pro ukládání informací o uživatelích
 
 
-# Funkce pro zpracování zpráv
 async def websocket_handler(websocket, path):
-    client_id = len(connected) + 1  # Přiřazení jedinečného ID klientovi
-    connected[client_id] = websocket  # Uložení klienta do slovníku
+    client_id = len(connected) + 1
+    connected[client_id] = websocket
     user_agent = websocket.request_headers.get('User-Agent', 'Console')
+    client_ip = websocket.remote_address[0]
+
+    # Přidání informací o uživateli do seznamu
+    user_info = {"client_id": client_id, "ip": client_ip, "user_agent": user_agent}
+    user_info_list.append(user_info)
+
+    print(
+        f"-------------------------------------------------------------\nPYTHON: Client {client_id} with IP {client_ip} ({user_agent}) connected.")
+    print(f"Current user list: {user_info_list}")  # Debug: Výpis seznamu uživatelů
 
     try:
         async for message in websocket:
@@ -22,40 +32,20 @@ async def websocket_handler(websocket, path):
 
             print(f"Client {client_id} ({user_agent}): {message}")
 
-            if client_id in banned_users:
-                await websocket.send("Jste banován, nelze posílat zprávy.")
-                # Pokud je klient banovaný, odpojíme ho
-                await websocket.close()
-                continue
-
-            if "Rum" in message:
-                # Banování klienta
-                banned_users.add(client_id)  # Přidání klienta do seznamu banovaných
-                await websocket.send("Byl jste banován za použití zakázaného slova 'Rum'. Budete odbanován za 10s")
-                await websocket.close()
-                ip_address = websocket.remote_address[0]  # Získání IP adresy klienta
-                ip_to_client[ip_address] = client_id  # Mapování IP adresy na klienta
-                await asyncio.sleep(ban_duration)  # Počkej 10 sekund
-                banned_users.discard(client_id)
-                ip_to_client.pop(ip_address, None)  # Odstranění z mapování IP adresy na klienta
-
-            # Odeslání zprávy všem klientům s časem
             for client in connected.values():
                 message_with_time = f"{time_in_future_str} - ID {client_id}, {message}"
                 await client.send(message_with_time)
 
     except websockets.exceptions.ConnectionClosedError:
-        # Odpojení klienta
-        print(f"Client {client_id} ({user_agent}) disconnected.")
+        print(f"Client {client_id} with IP {client_ip} disconnected.")
     finally:
-        # Smažeme odpojeného klienta z evidovaných
         del connected[client_id]
-        banned_users.discard(client_id)
+        # Odebrání uživatele ze seznamu při odpojení
+        user_info_list[:] = [info for info in user_info_list if info["client_id"] != client_id]
 
 
-# Funkce pro spuštění WebSocket serveru
 async def start_websocket_server():
-    ip_address = "0.0.0.0"
+    ip_address = "127.0.0.1"
     port = 6789
 
     server = await websockets.serve(
@@ -69,5 +59,61 @@ async def start_websocket_server():
     await server.wait_closed()
 
 
+# Discord Bot části
+intents = discord.Intents.default()
+intents.messages = True  # Zajistí, že bot bude mít přístup k zprávám
+bot = commands.Bot(command_prefix='', intents=intents)
+
+
+@bot.event
+async def on_ready():
+    print(f'Bot {bot.user.name} se připojil na server.')
+
+
+@bot.event
+async def on_message(message):
+    # Ignoruje zprávy od samotného bota
+    if message.author == bot.user:
+        return
+
+    # Pokud je zmíněn bot (ping)
+    if bot.user.mentioned_in(message):
+        if "ip" in message.content.lower():
+            # Poslat seznam user_info_list na Discord
+            if user_info_list:
+                user_info_str = "\n".join(
+                    [f"ID: {info['client_id']}, IP: {info['ip']}, User-Agent: {info['user_agent']}"
+                     for info in user_info_list]
+                )
+            else:
+                user_info_str = "Žádné připojené klienty nelze zobrazit."
+
+            await message.channel.send(f"Informace o klientech:\n```{user_info_str}```")
+        else:
+            await message.channel.send(f"{message.author.mention}, CO MĚ PINGUJEŠ MORE?!")
+
+    # Aby bot nezapomněl zpracovávat příkazy
+    await bot.process_commands(message)
+
+
+# Funkce pro spuštění Discord bota
+async def start_discord_bot():
+    try:
+        await bot.start(
+            "MTE2NDU4MjM5MDA2NTI3NDkwMA.GMwXIo.wN6CXoCIeRPPKwDY2AB-W3XSFwUL7nc3pjUUjM")  # Zde vložte svůj token
+    except Exception as e:
+        print(f'Chyba při spuštění bota: {e}')
+
+
+# Hlavní funkce pro spuštění obou serverů
+async def main():
+    # Spustí jak Discord bota, tak WebSocket server současně
+    await asyncio.gather(
+        start_websocket_server(),
+        start_discord_bot()
+    )
+
+
 if __name__ == "__main__":
-    asyncio.get_event_loop().run_until_complete(start_websocket_server())
+    # Spustí hlavní asynchronní funkci
+    asyncio.run(main())
