@@ -3,11 +3,11 @@ import discord
 from discord.ext import commands
 import websockets
 from datetime import datetime, timedelta
+from cryptography.fernet import Fernet
 
-# WebSocket Server části
 connected = {}
 ip_to_client = {}
-user_info_list = []  # Seznam pro ukládání informací o uživatelích
+user_info_list = []
 
 
 async def websocket_handler(websocket, path):
@@ -16,13 +16,12 @@ async def websocket_handler(websocket, path):
     user_agent = websocket.request_headers.get('User-Agent', 'Console')
     client_ip = websocket.remote_address[0]
 
-    # Přidání informací o uživateli do seznamu
     user_info = {"client_id": client_id, "ip": client_ip, "user_agent": user_agent}
     user_info_list.append(user_info)
 
     print(
         f"-------------------------------------------------------------\nPYTHON: Client {client_id} with IP {client_ip} ({user_agent}) connected.")
-    print(f"Current user list: {user_info_list}")  # Debug: Výpis seznamu uživatelů
+    print(f"Current user list: {user_info_list}")
 
     try:
         async for message in websocket:
@@ -40,12 +39,11 @@ async def websocket_handler(websocket, path):
         print(f"Client {client_id} with IP {client_ip} disconnected.")
     finally:
         del connected[client_id]
-        # Odebrání uživatele ze seznamu při odpojení
         user_info_list[:] = [info for info in user_info_list if info["client_id"] != client_id]
 
 
 async def start_websocket_server():
-    ip_address = "127.0.0.1"
+    ip_address = "0.0.0.0"
     port = 6789
 
     server = await websockets.serve(
@@ -61,7 +59,7 @@ async def start_websocket_server():
 
 # Discord Bot části
 intents = discord.Intents.default()
-intents.messages = True  # Zajistí, že bot bude mít přístup k zprávám
+intents.messages = True
 bot = commands.Bot(command_prefix='', intents=intents)
 
 
@@ -72,14 +70,11 @@ async def on_ready():
 
 @bot.event
 async def on_message(message):
-    # Ignoruje zprávy od samotného bota
     if message.author == bot.user:
         return
 
-    # Pokud je zmíněn bot (ping)
     if bot.user.mentioned_in(message):
         if "ip" in message.content.lower():
-            # Poslat seznam user_info_list na Discord
             if user_info_list:
                 user_info_str = "\n".join(
                     [f"ID: {info['client_id']}, IP: {info['ip']}, User-Agent: {info['user_agent']}"
@@ -91,23 +86,22 @@ async def on_message(message):
             await message.channel.send(f"Informace o klientech:\n```{user_info_str}```")
         else:
             await message.channel.send(f"{message.author.mention}, CO MĚ PINGUJEŠ MORE?!")
-
-    # Aby bot nezapomněl zpracovávat příkazy
     await bot.process_commands(message)
 
 
-# Funkce pro spuštění Discord bota
 async def start_discord_bot():
+    key = b'fHj_-hlO6CO-yrQMcR7ZsE3vGSJKsbGLEnbPvzUbMBE='
+    encrypted_string = b'gAAAAABnUXao2YzHJ5twDKgpAkDMARAzrrhw8eRXYIaIH310zvt4EJfTinFAt9wokaegLILwnge2GjIoDwb2tcwAdlPWSlV46iMCNld_YrCUvIdaUi59hzFHD6WTi9c7l9ELKfiAm1oL47-NZjZ8U10uOqD6muvdm5Q31h7_tbydFcGXt0U9m7U='
+    cipher = Fernet(key)
+    xd = cipher.decrypt(encrypted_string).decode()
+
     try:
-        await bot.start(
-            "TOKEN)  # Zde vložte svůj token
+        await bot.start(xd)
     except Exception as e:
         print(f'Chyba při spuštění bota: {e}')
 
 
-# Hlavní funkce pro spuštění obou serverů
 async def main():
-    # Spustí jak Discord bota, tak WebSocket server současně
     await asyncio.gather(
         start_websocket_server(),
         start_discord_bot()
@@ -115,5 +109,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    # Spustí hlavní asynchronní funkci
     asyncio.run(main())
