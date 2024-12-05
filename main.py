@@ -14,7 +14,9 @@ async def websocket_handler(websocket, path):
     client_id = len(connected) + 1
     connected[client_id] = websocket
     user_agent = websocket.request_headers.get('User-Agent', 'Console')
-    client_ip = websocket.remote_address[0]
+
+    # Získání skutečné IP adresy uživatele z hlavičky X-Forwarded-For
+    client_ip = websocket.request_headers.get('X-Forwarded-For', websocket.remote_address[0]).split(',')[0]
 
     user_info = {"client_id": client_id, "ip": client_ip, "user_agent": user_agent}
     user_info_list.append(user_info)
@@ -65,8 +67,9 @@ bot = commands.Bot(command_prefix='', intents=intents)
 @bot.event
 async def on_ready():
     print(f'Bot {bot.user.name} se připojil na server.')
-    logging_channel = bot.get_channel(1166052490643505222)
+    logging_channel = bot.get_channel(1166052490643505222)  # ID kanálu, kam pošle zprávu
     await logging_channel.send(f"### ---------- Discord bot {bot.user.name} se připojil na server ----------")
+
 
 @bot.event
 async def on_message(message):
