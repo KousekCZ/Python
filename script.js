@@ -23,7 +23,6 @@ function createWebSocket() {
     }
 
     websocket = new WebSocket("wss://wa-websockets.onrender.com");
-    //websocket = new WebSocket("ws://localhost:6789");
     reconnecting = true;
 
     websocket.onmessage = function (event) {
