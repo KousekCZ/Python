@@ -39,7 +39,6 @@ async def websocket_handler(websocket, path):
         print(f"Client {client_id} with IP {client_ip} disconnected.")
     finally:
         del connected[client_id]
-        user_info_list[:] = [info for info in user_info_list if info["client_id"] != client_id]
 
 
 async def start_websocket_server():
