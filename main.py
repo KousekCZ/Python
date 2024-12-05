@@ -100,7 +100,7 @@ async def on_message(message):
 async def start_discord_bot():
     try:
         await bot.start(
-            "MTE2NDU4MjM5MDA2NTI3NDkwMA.GMwXIo.wN6CXoCIeRPPKwDY2AB-W3XSFwUL7nc3pjUUjM")  # Zde vložte svůj token
+            "TOKEN)  # Zde vložte svůj token
     except Exception as e:
         print(f'Chyba při spuštění bota: {e}')
 
