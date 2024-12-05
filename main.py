@@ -66,7 +66,8 @@ bot = commands.Bot(command_prefix='', intents=intents)
 @bot.event
 async def on_ready():
     print(f'Bot {bot.user.name} se připojil na server.')
-
+    logging_channel = bot.get_channel(1166052490643505222)
+    await logging_channel.send(f"### ---------- Discord bot {bot.user.name} se připojil na server ----------")
 
 @bot.event
 async def on_message(message):
