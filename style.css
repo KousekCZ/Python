@@ -90,7 +90,7 @@ p {
     }
 }
 
-/* Media query pro mobilní zařízení */
+/* Media query pro mobilní zařízení  */
 @media (max-width: 600px) {
     #message-panel {
         width: 100%; /* Na menších obrazovkách naplno rozšíříme */
