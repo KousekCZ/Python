@@ -2,19 +2,9 @@ let websocket = null;
 let reconnecting = false;
 const messageInput = document.getElementById("message");
 const connectionStatus = document.getElementById("connection-status");
-let userName;
 
-// Funkce pro zadání jména uživatele
-async function getUserName() {
-    while (!userName) {
-        userName = prompt("Zadejte sve jmeno:");
-    }
-}
-
-// Zavolání asynchronní funkce pro zadání jména uživatele
-getUserName()
-    .then(() => createWebSocket())
-    .catch((error) => console.error(error));
+// Zavolání funkce pro vytvoření WebSocket spojení
+createWebSocket();
 
 function createWebSocket() {
     if (reconnecting) {
@@ -22,7 +12,7 @@ function createWebSocket() {
         messagesDiv.innerHTML = "<p>Odpojen. Obnovuji spojení...</p>" + messagesDiv.innerHTML;
     }
 
-    websocket = new WebSocket("wss://wa-websockets.onrender.com");
+    websocket = new WebSocket("ws://localhost:6789");
     reconnecting = true;
 
     websocket.onmessage = function (event) {
@@ -42,7 +32,7 @@ function createWebSocket() {
     websocket.onopen = function () {
         if (reconnecting) {
             // Odešleme uživatelovo jméno na server
-            websocket.send(`User: ${userName} - Pripojen/a!`);
+            websocket.send(` - Pripojen/a!`);
         }
         connectionStatus.innerText = "Pripojen";
         connectionStatus.style.color = "green";
@@ -63,7 +53,7 @@ function sendMessage() {
     const message = messageInput.value;
     if (message.trim() !== "") {
         // Odešleme zprávu s uživatelovým jménem na server
-        websocket.send(`User: ${userName}, Zprava: ${message}`);
+        websocket.send(`Zprava: ${message}`);
         messageInput.value = "";
     }
 }
